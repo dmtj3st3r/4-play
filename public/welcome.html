@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>4 P L A Y - Welcome</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    body {
+      margin: 0;
+      background-image: url('/images/welcome_image.png');
+      background-size: cover;
+      background-position: center;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      font-family: sans-serif;
+    }
+    .overlay {
+      background: rgba(0, 0, 0, 0.6);
+      padding: 20px;
+      border-radius: 10px;
+      text-align: center;
+    }
+    h1 {
+      color: #fff;
+      font-size: 3em;
+    }
+    button {
+      margin-top: 20px;
+      padding: 12px 30px;
+      font-size: 1.3em;
+      background-color: #ff4081;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+    }
+    button:hover {
+      background-color: #ff79a6;
+    }
+  </style>
+</head>
+<body>
+  <div class="overlay">
+    <h1>Welcome to 4 P L A Y</h1>
+    <button onclick="location.href='game.html'">Join Game</button>
+  </div>
+</body>
+</html>

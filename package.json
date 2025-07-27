@@ -1,0 +1,16 @@
+{
+  "name": "4play",
+  "version": "1.0.0",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "dotenv": "^17.2.1",
+    "express": "^4.21.2",
+    "peer": "^0.6.1",
+    "sanitize-html": "^2.17.0",
+    "socket.io": "^4.8.1",
+    "vercel": "^41.0.2"
+  }
+}

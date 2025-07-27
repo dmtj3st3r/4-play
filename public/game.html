@@ -1,0 +1,757 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
+    />
+    <title>4 P L A Y - Game</title>
+    <link rel="stylesheet" href="style.css" />
+    <meta name="theme-color" content="#121212" />
+  </head>
+  <body>
+    <div class="container">
+      <h1>4 P L A Y</h1>
+
+      <!-- Webcam Modal -->
+      <div id="webcamModal" class="modal hidden">
+        <div class="modal-content webcam-modal">
+          <h3 id="webcamTitle">Player's Turn - Remove Clothing</h3>
+          <div id="webcamContainer">
+            <video id="webcamVideo" autoplay playsinline></video>
+            <div id="webcamControls">
+              <button id="startWebcam" class="touch-target">
+                Start Camera
+              </button>
+              <button id="stopWebcam" class="touch-target">Stop Camera</button>
+              <button id="closeWebcam" class="touch-target">Close</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div id="joinArea">
+        <input
+          type="text"
+          id="nameInput"
+          placeholder="Enter your name"
+          maxlength="20"
+        />
+        <button id="joinBtn" class="touch-target">Join Game</button>
+      </div>
+      <div id="gameArea" style="display: none">
+        <div id="adminPanel" class="hidden">
+          <h3>Admin Controls</h3>
+          <input
+            type="password"
+            id="adminPassword"
+            placeholder="Admin Password"
+          />
+          <button id="resetGame" class="touch-target">Reset Game</button>
+          <button id="kickPlayer" class="touch-target">Kick Player</button>
+        </div>
+
+        <div class="game-main">
+          <div id="taskDisplay">
+            <div id="taskMeta">
+              <span id="taskCategory" class="category-chip"></span>
+              <span id="taskPoints" class="points-badge"></span>
+            </div>
+            <div class="task-image-container">
+              <img id="taskImage" src="" alt="Task image" />
+            </div>
+            <p id="taskText" class="task-text"></p>
+            <button id="getTask" class="main-action-btn touch-target">
+              Get Task
+            </button>
+          </div>
+
+          <div id="ultimateTimer" class="hidden">
+            <h3>TWO MINUTE REQUEST</h3>
+            <div id="timerDisplay">02:00</div>
+            <button id="startTimer" class="touch-target">Start Timer</button>
+          </div>
+
+          <div id="chatContainer">
+            <h3>Game Chat</h3>
+            <div id="chatMessages"></div>
+            <div id="chatControls">
+              <input
+                type="text"
+                id="chatInput"
+                placeholder="Type message..."
+                maxlength="200"
+              />
+              <button id="sendMessage" class="touch-target">Send</button>
+            </div>
+          </div>
+
+          <div id="playerInfo">
+            <div id="playersList"></div>
+            <div id="webcamStatus" class="webcam-status hidden">
+              <div class="webcam-indicator">
+                <span id="webcamPlayerName">Player</span> is on camera
+                <div class="webcam-pulse"></div>
+              </div>
+            </div>
+            <div id="scoresContainer"></div>
+            <div id="bonusCounter">
+              Rare Bonuses: <span id="rareBonusCount">0</span>/3
+            </div>
+          </div>
+        </div>
+
+        <div class="bottom-panel">
+          <div id="taskHistory">
+            <h3>Previous Tasks</h3>
+            <ul id="historyList"></ul>
+          </div>
+
+          <div id="customTaskForm">
+            <h3>Create Task</h3>
+            <input
+              type="text"
+              id="taskInput"
+              placeholder="Task text"
+              maxlength="100"
+            />
+            <select id="categorySelect">
+              <option value="MILD">Mild (1 point)</option>
+              <option value="INTIMATE">Intimate (2 points)</option>
+              <option value="RISKY">Risky (3 points)</option>
+            </select>
+            <div id="imageSelection">
+              <label for="imageSelect">Choose Image:</label>
+              <select id="imageSelect">
+                <option value="/images/default.jpg">Default</option>
+                <option value="/images/CLOTHES.jpg">Clothing</option>
+                <option value="/images/FANTASY.jpg">Fantasy</option>
+                <option value="/images/DARE.jpg">Dare</option>
+                <option value="/images/DRINK.jpg">Drink</option>
+                <option value="/images/QUESTION.jpg">Question</option>
+                <option value="/images/BONUS.jpg">Bonus</option>
+                <option value="/images/30SEC.jpg">30 Second</option>
+              </select>
+            </div>
+            <button id="submitTask" class="touch-target">Submit</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Swap Player Modal -->
+    <div id="swapModal" class="modal hidden">
+      <div class="modal-content">
+        <h3>Select Player to Swap Scores With</h3>
+        <div id="swapPlayerList"></div>
+        <button id="cancelSwap" class="touch-target">Cancel</button>
+      </div>
+    </div>
+
+    <!-- Skip Notification -->
+    <div id="skipNotification" class="skip-notification hidden"></div>
+
+    <!-- Audio Elements -->
+    <audio id="clickSound" src="/sounds/click.mp3"></audio>
+    <audio id="taskSound" src="/sounds/task.mp3"></audio>
+    <audio id="messageSound" src="/sounds/message.mp3"></audio>
+    <audio id="ultimateSound" src="/sounds/ultimate.mp3"></audio>
+    <audio id="alarmSound" src="/sounds/alarm.mp3"></audio>
+    <audio id="rareSound" src="/sounds/rare.mp3"></audio>
+
+    <script src="https://unpkg.com/peerjs@1.4.7/dist/peerjs.min.js"></script>
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+      const socket = io();
+      const elements = {
+        nameInput: document.getElementById("nameInput"),
+        joinBtn: document.getElementById("joinBtn"),
+        joinArea: document.getElementById("joinArea"),
+        gameArea: document.getElementById("gameArea"),
+        taskInput: document.getElementById("taskInput"),
+        categorySelect: document.getElementById("categorySelect"),
+        submitTask: document.getElementById("submitTask"),
+        imageSelect: document.getElementById("imageSelect"),
+        getTask: document.getElementById("getTask"),
+        taskImage: document.getElementById("taskImage"),
+        taskText: document.getElementById("taskText"),
+        taskCategory: document.getElementById("taskCategory"),
+        taskPoints: document.getElementById("taskPoints"),
+        playersList: document.getElementById("playersList"),
+        scoresContainer: document.getElementById("scoresContainer"),
+        historyList: document.getElementById("historyList"),
+        taskDisplay: document.getElementById("taskDisplay"),
+        chatInput: document.getElementById("chatInput"),
+        sendMessage: document.getElementById("sendMessage"),
+        chatMessages: document.getElementById("chatMessages"),
+        ultimateTimer: document.getElementById("ultimateTimer"),
+        startTimer: document.getElementById("startTimer"),
+        timerDisplay: document.getElementById("timerDisplay"),
+        rareBonusCount: document.getElementById("rareBonusCount"),
+        adminPanel: document.getElementById("adminPanel"),
+        adminPassword: document.getElementById("adminPassword"),
+        resetGame: document.getElementById("resetGame"),
+        kickPlayer: document.getElementById("kickPlayer"),
+        swapModal: document.getElementById("swapModal"),
+        swapPlayerList: document.getElementById("swapPlayerList"),
+        cancelSwap: document.getElementById("cancelSwap"),
+        skipNotification: document.getElementById("skipNotification"),
+        webcamModal: document.getElementById("webcamModal"),
+        webcamVideo: document.getElementById("webcamVideo"),
+        webcamTitle: document.getElementById("webcamTitle"),
+        startWebcam: document.getElementById("startWebcam"),
+        stopWebcam: document.getElementById("stopWebcam"),
+        closeWebcam: document.getElementById("closeWebcam"),
+        webcamStatus: document.getElementById("webcamStatus"),
+        webcamPlayerName: document.getElementById("webcamPlayerName")
+      };
+
+      const sounds = {
+        click: document.getElementById("clickSound"),
+        task: document.getElementById("taskSound"),
+        message: document.getElementById("messageSound"),
+        ultimate: document.getElementById("ultimateSound"),
+        alarm: document.getElementById("alarmSound"),
+        rare: document.getElementById("rareSound"),
+      };
+
+      let gameState = {
+        myId: null,
+        currentTurn: null,
+        taskHistory: [],
+        timerInterval: null,
+        sessionToken: null,
+        webcamStream: null,
+        isWebcamActive: false,
+        peer: null,
+        peers: {},
+        peerConnections: {}
+      };
+
+      // Event Listeners
+      elements.joinBtn.addEventListener("click", joinGame);
+      elements.submitTask.addEventListener("click", submitCustomTask);
+      elements.getTask.addEventListener("click", getNewTask);
+      elements.sendMessage.addEventListener("click", sendChatMessage);
+      elements.startTimer.addEventListener("click", startUltimateTimer);
+      elements.chatInput.addEventListener("keypress", (e) => {
+        if (e.key === "Enter") sendChatMessage();
+      });
+      elements.resetGame.addEventListener("click", adminResetGame);
+      elements.kickPlayer.addEventListener("click", adminKickPlayer);
+      elements.cancelSwap.addEventListener("click", () => {
+        elements.swapModal.classList.add("hidden");
+      });
+      elements.startWebcam.addEventListener("click", startWebcam);
+      elements.stopWebcam.addEventListener("click", stopWebcam);
+      elements.closeWebcam.addEventListener("click", closeWebcamModal);
+      elements.imageSelect.addEventListener("change", handleImageSelect);
+
+      // Initialize PeerJS connection
+      function initPeer() {
+        gameState.peer = new Peer(socket.id, {
+          host: location.hostname,
+          port: location.port || (location.protocol === 'https:' ? 443 : 80),
+          path: '/peerjs'
+        });
+
+        gameState.peer.on('open', id => {
+          console.log('PeerJS connection opened with ID:', id);
+        });
+
+        gameState.peer.on('call', call => {
+          call.answer();
+          call.on('stream', remoteStream => {
+            console.log('Received remote stream from:', call.peer);
+            elements.webcamVideo.srcObject = remoteStream;
+          });
+          call.on('error', err => {
+            console.error('Call error:', err);
+          });
+        });
+
+        gameState.peer.on('connection', conn => {
+          console.log('Peer connected:', conn.peer);
+          gameState.peerConnections[conn.peer] = conn;
+        });
+
+        gameState.peer.on('error', err => {
+          console.error('PeerJS error:', err);
+        });
+      }
+
+      // Start broadcasting stream to all peers
+      async function startBroadcast() {
+        if (!gameState.webcamStream) return;
+        
+        for (const playerId in gameState.peers) {
+          if (playerId !== socket.id) {
+            const call = gameState.peer.call(playerId, gameState.webcamStream);
+            call.on('stream', remoteStream => {
+              // Not needed for broadcaster
+            });
+            call.on('error', err => {
+              console.error('Call error:', err);
+            });
+          }
+        }
+      }
+
+      // Connect to all existing players
+      function connectToPlayers(playerIds) {
+        playerIds.forEach(playerId => {
+          if (playerId !== socket.id && !gameState.peers[playerId]) {
+            const conn = gameState.peer.connect(playerId);
+            gameState.peers[playerId] = conn;
+            
+            conn.on('open', () => {
+              console.log('Connected to peer:', playerId);
+            });
+            
+            conn.on('error', err => {
+              console.error('Connection error:', err);
+            });
+          }
+        });
+      }
+
+      // Socket Listeners
+      socket.on("updatePlayers", updatePlayersList);
+      socket.on("displayTask", displayNewTask);
+      socket.on("showSkipMessage", showSkipNotification);
+      socket.on("receiveMessage", displayChatMessage);
+      socket.on("playUltimateSound", playUltimateSound);
+      socket.on("playRareSound", playRareSound);
+      socket.on("timerStarted", handleTimerStart);
+      socket.on("playAlarmSound", playAlarmSound);
+      socket.on("updateBonusCount", updateBonusCounter);
+      socket.on("sessionToken", (token) => {
+        gameState.sessionToken = token;
+      });
+      socket.on("selectPlayerForSwap", showSwapModal);
+      socket.on("addToHistory", addToHistory);
+      socket.on("gameReset", resetClientGame);
+      socket.on("kicked", () => {
+        alert("You have been kicked from the game");
+        location.reload();
+      });
+      socket.on("gameFull", () => {
+        alert("Game is full! Try again later");
+      });
+      socket.on("invalidName", () => {
+        alert("Please enter a valid name");
+      });
+      socket.on("notYourTurn", () => {
+        alert("Wait for your turn!");
+      });
+      socket.on("sessionError", () => {
+        alert("Session error. Please rejoin the game.");
+        location.reload();
+      });
+      socket.on("adminSuccess", showAdminSuccess);
+      socket.on("adminError", showAdminError);
+      socket.on("showWebcam", showWebcamModal);
+      socket.on("hideWebcam", hideWebcamModal);
+      socket.on("webcamStatusUpdate", updateWebcamStatus);
+      socket.on("playerList", connectToPlayers);
+      socket.on("playerDisconnected", (playerId) => {
+        if (gameState.peers[playerId]) {
+          gameState.peers[playerId].close();
+          delete gameState.peers[playerId];
+        }
+        if (gameState.peerConnections[playerId]) {
+          gameState.peerConnections[playerId].close();
+          delete gameState.peerConnections[playerId];
+        }
+      });
+
+      // Functions
+      function joinGame() {
+        const name = elements.nameInput.value.trim();
+        if (name) {
+          socket.emit("joinGame", name);
+          elements.joinArea.style.display = "none";
+          elements.gameArea.style.display = "block";
+          initPeer(); // Initialize PeerJS when joining game
+        }
+      }
+
+      function getNewTask() {
+        vibrate();
+        if (gameState.sessionToken) {
+          socket.emit("getTask", gameState.sessionToken);
+          sounds.task.play();
+        }
+      }
+
+      function submitCustomTask() {
+        const text = elements.taskInput.value.trim();
+        if (text && gameState.sessionToken) {
+          const category = elements.categorySelect.value;
+          const points =
+            category === "MILD" ? 1 : category === "INTIMATE" ? 2 : 3;
+          const imageUrl = elements.imageSelect.value;
+
+          socket.emit("newTask", gameState.sessionToken, {
+            text,
+            category,
+            points,
+            imageUrl,
+          });
+          sounds.click.play();
+          elements.taskInput.value = "";
+        }
+      }
+
+      function sendChatMessage() {
+        const message = elements.chatInput.value.trim();
+        if (message && gameState.sessionToken) {
+          socket.emit("sendMessage", gameState.sessionToken, { message });
+          elements.chatInput.value = "";
+          sounds.click.play();
+        }
+      }
+
+      function startUltimateTimer() {
+        if (gameState.sessionToken) {
+          socket.emit("startTimer", gameState.sessionToken);
+          elements.startTimer.disabled = true;
+          let timeLeft = 120;
+
+          clearInterval(gameState.timerInterval);
+          gameState.timerInterval = setInterval(() => {
+            timeLeft--;
+            const minutes = Math.floor(timeLeft / 60);
+            const seconds = timeLeft % 60;
+            elements.timerDisplay.textContent = `${minutes.toString().padStart(2, "0")}:${seconds.toString().padStart(2, "0")}`;
+
+            if (timeLeft <= 0) {
+              clearInterval(gameState.timerInterval);
+              elements.timerDisplay.textContent = "00:00";
+            }
+          }, 1000);
+        }
+      }
+
+      function updatePlayersList(players, currentId) {
+        gameState.myId = socket.id;
+        gameState.currentTurn = currentId;
+
+        elements.playersList.innerHTML = players
+          .map(
+            (p) => `
+        <div class="player ${p.id === currentId ? "current-turn" : ""}" data-id="${p.id}">
+          ${p.name}
+        </div>
+      `,
+          )
+          .join("");
+
+        elements.scoresContainer.innerHTML = players
+          .map(
+            (p) => `
+        <div class="score-entry">
+          <span class="score-name">${p.name}:</span>
+          <span class="score-value">${p.score}</span>
+        </div>
+      `,
+          )
+          .join("");
+
+        elements.getTask.disabled = gameState.myId !== currentId;
+        elements.getTask.textContent =
+          gameState.myId === currentId
+            ? "Get Task (Your Turn)"
+            : "Wait Your Turn";
+
+        // Show admin panel if password matches
+        if (elements.adminPassword.value === "${config.ADMIN_PWD}") {
+          elements.adminPanel.classList.remove("hidden");
+        }
+      }
+
+      function displayNewTask(task) {
+        elements.taskDisplay.classList.add("task-reveal");
+
+        setTimeout(() => {
+          elements.taskText.textContent = task.task;
+          elements.taskImage.src = task.imageUrl || "/images/default.jpg";
+          elements.taskImage.style.display = "block";
+          elements.taskCategory.textContent = task.category;
+          elements.taskCategory.dataset.category = task.category;
+          elements.taskPoints.textContent = `+${task.points}`;
+          elements.taskDisplay.style.borderColor = getCategoryColor(
+            task.category,
+          );
+
+          if (task.isRare) {
+            const notification = document.createElement("div");
+            notification.className = "rare-notification";
+            notification.textContent = "✨ RARE BONUS! ✨";
+            elements.taskDisplay.prepend(notification);
+            setTimeout(() => notification.remove(), 3000);
+          }
+
+          setTimeout(() => {
+            elements.taskDisplay.classList.remove("task-reveal");
+          }, 100);
+        }, 500);
+      }
+
+      function addToHistory(task) {
+        gameState.taskHistory.unshift({
+          text: task.text,
+          category: task.category,
+          points: task.points,
+        });
+
+        if (gameState.taskHistory.length > 5) gameState.taskHistory.pop();
+        updateHistory();
+      }
+
+      function updateHistory() {
+        elements.historyList.innerHTML = gameState.taskHistory
+          .map(
+            (task) => `
+        <li class="history-item" data-category="${task.category}">
+          <span class="history-points">+${task.points}</span>
+          ${task.text}
+        </li>
+      `,
+          )
+          .join("");
+      }
+
+      function playRareSound() {
+        sounds.rare.play();
+      }
+
+      function showSkipNotification(playerName) {
+        elements.skipNotification.textContent = `${playerName} got MISS A TURN and will skip their next turn!`;
+        elements.skipNotification.classList.remove("hidden");
+
+        setTimeout(() => {
+          elements.skipNotification.classList.add("hidden");
+        }, 3000);
+      }
+
+      function displayChatMessage(data) {
+        if (data.player !== elements.nameInput.value.trim()) {
+          sounds.message.play();
+        }
+
+        const messageElement = document.createElement("div");
+        messageElement.className = "chat-message";
+        messageElement.innerHTML = `
+        <span class="chat-player">${data.player}:</span>
+        ${data.message}
+        <span class="chat-timestamp">${data.timestamp}</span>
+      `;
+        elements.chatMessages.appendChild(messageElement);
+        elements.chatMessages.scrollTop = elements.chatMessages.scrollHeight;
+      }
+
+      function playUltimateSound() {
+        sounds.ultimate.play();
+        elements.ultimateTimer.classList.remove("hidden");
+      }
+
+      function handleTimerStart() {
+        elements.startTimer.disabled = true;
+      }
+
+      function playAlarmSound() {
+        sounds.alarm.play();
+      }
+
+      function updateBonusCounter(playerId, count) {
+        if (playerId === gameState.myId) {
+          elements.rareBonusCount.textContent = count;
+        }
+      }
+
+      function showSwapModal(players) {
+        elements.swapPlayerList.innerHTML = players
+          .map(
+            (player) => `
+        <div class="swap-player touch-target" data-id="${player.id}">
+          ${player.name} (${player.score} pts)
+        </div>
+      `,
+          )
+          .join("");
+
+        elements.swapModal.classList.remove("hidden");
+
+        document.querySelectorAll(".swap-player").forEach((el) => {
+          el.addEventListener("click", () => {
+            const playerId = el.dataset.id;
+            socket.emit("swapScores", gameState.sessionToken, playerId);
+            elements.swapModal.classList.add("hidden");
+          });
+        });
+      }
+
+      function resetClientGame() {
+        gameState.taskHistory = [];
+        updateHistory();
+        elements.ultimateTimer.classList.add("hidden");
+        clearInterval(gameState.timerInterval);
+        elements.timerDisplay.textContent = "02:00";
+        elements.startTimer.disabled = false;
+      }
+
+      function adminResetGame() {
+        const password = elements.adminPassword.value;
+        if (password) {
+          socket.emit("adminCommand", password, "reset");
+        }
+      }
+
+      function adminKickPlayer() {
+        const password = elements.adminPassword.value;
+        const playerId = prompt("Enter player ID to kick:");
+        if (password && playerId) {
+          socket.emit("adminCommand", password, "kick", playerId);
+        }
+      }
+
+      function showAdminSuccess(message) {
+        alert(`Admin: ${message}`);
+      }
+
+      function showAdminError(message) {
+        alert(`Admin Error: ${message}`);
+      }
+
+      function vibrate() {
+        if ("vibrate" in navigator) {
+          navigator.vibrate([100, 50, 100]);
+        }
+      }
+
+      function getCategoryColor(category) {
+        const colors = {
+          RISKY: "#ff5252",
+          INTIMATE: "#7c4dff",
+          BONUS: "#ffeb3b",
+          MILD: "#4caf50",
+          PENALTY: "#f44336",
+          SAFE: "#9e9e9e",
+          CUSTOM: "#ff9800",
+          "ULTIMATE BONUS": "#ff8a00",
+          "RARE BONUS": "#9c27b0",
+          "SPECIAL BONUS": "#00bcd4",
+        };
+        return colors[category] || "#673ab7";
+      }
+
+      async function startWebcam() {
+        try {
+          gameState.webcamStream = await navigator.mediaDevices.getUserMedia({
+            video: {
+              width: { ideal: 640 },
+              height: { ideal: 480 },
+              facingMode: "user"
+            },
+            audio: false,
+          });
+          elements.webcamVideo.srcObject = gameState.webcamStream;
+          gameState.isWebcamActive = true;
+          elements.startWebcam.disabled = true;
+          elements.stopWebcam.disabled = false;
+
+          // Start broadcasting to other players
+          startBroadcast();
+          
+          // Notify server that webcam is active
+          socket.emit("webcamStarted", gameState.sessionToken);
+        } catch (error) {
+          console.error("Error accessing webcam:", error);
+          alert("Unable to access webcam. Please check permissions.");
+        }
+      }
+
+      function stopWebcam() {
+        if (gameState.webcamStream) {
+          gameState.webcamStream.getTracks().forEach(track => track.stop());
+          gameState.webcamStream = null;
+          elements.webcamVideo.srcObject = null;
+          gameState.isWebcamActive = false;
+          elements.startWebcam.disabled = false;
+          elements.stopWebcam.disabled = true;
+
+          // Notify server that webcam is stopped
+          socket.emit("webcamStopped", gameState.sessionToken);
+        }
+      }
+
+      function showWebcamModal(playerName, isMyTurn, taskType = "REMOVE AN ITEM OF CLOTHING") {
+        let titleText;
+        if (isMyTurn) {
+          titleText =
+            taskType === "20 SEC TEASE"
+              ? "Your Turn - 20 Second Tease (Start Camera)"
+              : "Your Turn - Remove Clothing (Start Camera)";
+        } else {
+          titleText =
+            taskType === "20 SEC TEASE"
+              ? `${playerName}'s Turn - 20 Second Tease`
+              : `${playerName}'s Turn - Remove Clothing`;
+        }
+
+        elements.webcamTitle.textContent = titleText;
+        elements.webcamModal.classList.remove("hidden");
+        elements.webcamModal.style.display = "flex";
+
+        if (isMyTurn) {
+          // Show controls for the active player
+          elements.webcamVideo.style.display = "block";
+          elements.startWebcam.style.display = "inline-block";
+          elements.stopWebcam.style.display = "inline-block";
+          elements.closeWebcam.style.display = "inline-block";
+          elements.startWebcam.disabled = false;
+          elements.stopWebcam.disabled = true;
+        } else {
+          // For viewers, just show the video element
+          elements.webcamVideo.style.display = "block";
+          elements.startWebcam.style.display = "none";
+          elements.stopWebcam.style.display = "none";
+          elements.closeWebcam.style.display = "block";
+        }
+      }
+
+      function hideWebcamModal() {
+        elements.webcamModal.classList.add("hidden");
+        elements.webcamModal.style.display = "none";
+        stopWebcam();
+      }
+
+      function closeWebcamModal() {
+        hideWebcamModal();
+        socket.emit("webcamClosed", gameState.sessionToken);
+      }
+
+      function handleImageSelect() {
+        // Image selection is handled automatically by the select element
+      }
+
+      function updateWebcamStatus(data) {
+        if (data.active) {
+          elements.webcamPlayerName.textContent = data.playerName;
+          elements.webcamStatus.classList.remove("hidden");
+        } else {
+          elements.webcamStatus.classList.add("hidden");
+        }
+      }
+
+      // Send heartbeat every 10 seconds
+      setInterval(() => {
+        if (gameState.sessionToken) {
+          socket.emit("heartbeat");
+        }
+      }, 10000);
+    </script>
+  </body>
+</html>
